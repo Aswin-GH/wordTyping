@@ -587,7 +587,16 @@
   </div>
 </div>
 
-
+<!-- ---------------------------------
+B) CATEGORY PICKER OVERLAY (UI)
+--------------------------------- -->
+<!-- Category picker overlay -->
+<div id="categoryOverlay" class="overlay" style="display:none;">
+  <div class="overlayCard">
+    <h2 style="margin-top:4px;">Choose words</h2>
+    <div id="categoryGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-top:12px;"></div>
+  </div>
+</div>
 
 <script>
   // -----------------------------
@@ -644,100 +653,103 @@
   // Simple emoji hints (offline-friendly). Curated kid-friendly set.
   // Keys must be single words that match the game's word list (A-Z only).
   const emojiHints = {
-    // Nature & sky
-    SUN: '☀️',
-    CLOUD: '☁️',
-    UMBRELLA: '☔',
-    SNOWMAN: '☃',
-    SNOW: '❄️',
-    RAINBOW: '🌈',
-    WAVE: '🌊',
-    MOON: '🌙',
-    STAR: '⭐',
-    SPARKLE: '✨',
-    PLANT: '🌱',
-    TREE: '🌳',
-    PALM: '🌴',
-    CACTUS: '🌵',
-    TULIP: '🌷',
-    FLOWER: '🌸',
-    ROSE: '🌹',
-    SUNFLOWER: '🌻',
-    CLOVER: '🍀',
-    LEAF: '🍁',
-    MUSHROOM: '🍄',
+    // Nature / sky
+    SUN:'☀️', MOON:'🌙', STAR:'⭐', CLOUD:'☁️', RAINBOW:'🌈', UMBRELLA:'☔',
+    SNOW:'❄️', SNOWMAN:'☃️', WAVE:'🌊', LIGHTNING:'⚡',
 
-    // Fruits & snacks
-    APPLE: '🍎',
-    BANANA: '🍌',
-    GRAPES: '🍇',
-    STRAWBERRY: '🍓',
-    WATERMELON: '🍉',
-    PINEAPPLE: '🍍',
-    CHERRY: '🍒',
-    PEACH: '🍑',
-    LEMON: '🍋',
-    COOKIE: '🍪',
-    DONUT: '🍩',
-    ICECREAM: '🍦',
-    CHOCOLATE: '🍫',
-    CANDY: '🍬',
-    LOLLIPOP: '🍭',
-    CAKE: '🎂',
-    POPCORN: '🍿',
-    BOTTLE: '🍼',
+    // Objects
+    PEN:'🖊️', PENCIL:'✏️', ERASER:'🧽', BOOK:'📚', CAMERA:'📷',
+    PHONE:'📞', MOBILE:'📱', BOTTLE:'🍼', BAG:'👜', CHAIR:'🪑',
+    TABLE:'🪑', CLOCK:'🕒', LIGHTBULB:'💡', KEY:'🔑',
 
     // Vehicles
-    CAR: '🚗',
-    BUS: '🚌',
-    TRAIN: '🚆',
-    ROCKET: '🚀',
-    PLANE: '✈️',
-    BOAT: '⛵',
-    BIKE: '🚲',
+    CAR:'🚗', BUS:'🚌', TRAIN:'🚆', ROCKET:'🚀', PLANE:'✈️',
+    BOAT:'⛵', BIKE:'🚲',
+
+    // Birds
+    BIRD:'🐦', TURKEY:'🦃', CHICKEN:'🐔', ROOSTER:'🐓', CHICK:'🐥',
+    PENGUIN:'🐧', DOVE:'🕊️', EAGLE:'🦅', DUCK:'🦆', SWAN:'🦢',
+    OWL:'🦉', DODO:'🦤', FLAMINGO:'🦩', PEACOCK:'🦚', PARROT:'🦜',
+    CROW:'🐦‍⬛', GOOSE:'🪿', PHOENIX:'🐦‍🔥',
 
     // Animals
-    DOG: '🐶',
-    CAT: '🐱',
-    MOUSE: '🐭',
-    RABBIT: '🐰',
-    BEAR: '🐻',
-    PANDA: '🐼',
-    KOALA: '🐨',
-    TIGER: '🐯',
-    LION: '🦁',
-    FROG: '🐸',
-    MONKEY: '🐵',
-    PENGUIN: '🐧',
-    BIRD: '🐦',
-    BUTTERFLY: '🦋',
-    BEE: '🐝',
-    TURTLE: '🐢',
-    DOLPHIN: '🐬',
-    FISH: '🐟',
-    ELEPHANT: '🐘',
-    UNICORN: '🦄',
+    MONKEY:'🐒', GORILLA:'🦍', ORANGUTAN:'🦧', DOG:'🐕', POODLE:'🐩',
+    WOLF:'🐺', FOX:'🦊', RACCOON:'🦝', CAT:'🐈', LION:'🦁',
+    TIGER:'🐅', LEOPARD:'🐆', HORSE:'🐴', MOOSE:'🫎', DONKEY:'🫏',
+    UNICORN:'🦄', ZEBRA:'🦓', DEER:'🦌', BISON:'🦬', COW:'🐮',
+    OX:'🐂', WATERBUFFALO:'🐃', PIG:'🐷', BOAR:'🐗', RAM:'🐏',
+    EWE:'🐑', GOAT:'🐐', CAMEL:'🐪', LLAMA:'🦙', GIRAFFE:'🦒',
+    ELEPHANT:'🐘', MAMMOTH:'🦣', RHINOCEROS:'🦏', HIPPOPOTAMUS:'🦛',
+    MOUSE:'🐁', RAT:'🐀', HAMSTER:'🐹', RABBIT:'🐰', CHIPMUNK:'🐿️',
+    BEAVER:'🦫', HEDGEHOG:'🦔', BAT:'🦇', BEAR:'🐻', POLARBEAR:'🐻‍❄️',
+    KOALA:'🐨', PANDA:'🐼', SLOTH:'🦥', OTTER:'🦦', SKUNK:'🦨',
+    KANGAROO:'🦘', BADGER:'🦡', FROG:'🐸', CROCODILE:'🐊',
+    TURTLE:'🐢', LIZARD:'🦎', SNAKE:'🐍', DRAGON:'🐉',
+    SAUROPOD:'🦕', DINOSAUR:'🦖',
 
-    // Toys & fun
-    BALLOON: '🎈',
-    GIFT: '🎁',
-    BOW: '🎀',
-    PARTY: '🎉',
-    PAINT: '🎨',
-    PENCIL: '✏️',
-    BOOK: '📚',
-    GAME: '🎮',
-    DICE: '🎲',
-    MUSIC: '🎵',
-    GUITAR: '🎸',
-    DRUM: '🥁',
-    TROPHY: '🏆',
+    // Sea animals
+    WHALE:'🐳', DOLPHIN:'🐬', SEAL:'🦭', FISH:'🐟', BLOWFISH:'🐡',
+    SHARK:'🦈', OCTOPUS:'🐙', CRAB:'🦀', LOBSTER:'🦞', SHRIMP:'🦐',
+    SQUID:'🦑', OYSTER:'🦪', CORAL:'🪸', JELLYFISH:'🪼',
 
-    // Feelings (optional)
-    HAPPY: '😀',
-    LAUGH: '😂',
-    SLEEP: '😴',
-    COOL: '😎'
+    // Bugs
+    SNAIL:'🐌', BUTTERFLY:'🦋', BUG:'🐛', ANT:'🐜', HONEYBEE:'🐝',
+    BEETLE:'🪲', LADYBEETLE:'🐞', CRICKET:'🦗', COCKROACH:'🪳',
+    SPIDER:'🕷️', SCORPION:'🦂', MOSQUITO:'🦟', FLY:'🪰',
+    WORM:'🪱', GERM:'🦠',
+
+    // Fruits
+    GRAPES:'🍇', MELON:'🍈', WATERMELON:'🍉', TANGERINE:'🍊',
+    LEMON:'🍋', LIME:'🍋‍🟩', BANANA:'🍌', PINEAPPLE:'🍍',
+    MANGO:'🥭', APPLE:'🍎', GREENAPPLE:'🍏', PEAR:'🍐',
+    PEACH:'🍑', CHERRIES:'🍒', STRAWBERRY:'🍓', BLUEBERRIES:'🫐',
+    KIWI:'🥝', TOMATO:'🍅', OLIVE:'🫒', COCONUT:'🥥',
+
+    // Vegetables
+    MUSHROOM:'🍄', AVOCADO:'🥑', EGGPLANT:'🍆', POTATO:'🥔',
+    CARROT:'🥕', CORN:'🌽', CHILLIE:'🌶️', CAPSICUM:'🫑',
+    CUCUMBER:'🥒', BROCCOLI:'🥦', GARLIC:'🧄', ONION:'🧅',
+    PEANUTS:'🥜', BEANS:'🫘', CHESTNUT:'🌰', GINGER:'🫚',
+    PEA:'🫛', ROOT:'🫜',
+
+    // Snacks
+    BREAD:'🍞', CROISSANT:'🥐', BAGUETTE:'🥖', PRETZEL:'🥨',
+    BAGEL:'🥯', PANCAKES:'🥞', WAFFLE:'🧇', CHEESE:'🧀',
+    MEAT:'🍖', POULTRY:'🍗', BACON:'🥓', HAMBURGER:'🍔',
+    FRIES:'🍟', PIZZA:'🍕', HOTDOG:'🌭', SANDWICH:'🥪',
+    TACO:'🌮', BURRITO:'🌯', TAMALE:'🫔', FLATBREAD:'🥙',
+    FALAFEL:'🧆', EGG:'🥚', FONDUE:'🫕', SALAD:'🥗',
+    POPCORN:'🍿', BUTTER:'🧈', SALT:'🧂', SOFTIE:'🍦',
+    ICE:'🧊', ICECREAM:'🍨', DOUGHNUT:'🍩', COOKIE:'🍪',
+    CAKE:'🎂', SHORTCAKE:'🍰', CUPCAKE:'🧁', PIE:'🥧',
+    CHOCOLATE:'🍫', CANDY:'🍬', LOLLIPOP:'🍭', CUSTARD:'🍮',
+    HONEY:'🍯',
+
+    // Plants / flowers
+    BOUQUET:'💐', CHERRYBLOSSOM:'🌸', LOTUS:'🪷', ROSETTE:'🏵️',
+    ROSE:'🌹', HIBISCUS:'🌺', SUNFLOWER:'🌻', BLOSSOM:'🌼',
+    TULIP:'🌷', HYACINTH:'🪻', SEEDLING:'🌱', POT:'🪴',
+    PINE:'🌲', TREE:'🌳', PALM:'🌴', CACTUS:'🌵',
+    RICE:'🌾', HERB:'🌿', SHAMROCK:'☘️', CLOVER:'🍀', MAPLE:'🍁',
+
+    // Clothes
+    GLASSES:'👓', SUNGLASSES:'🕶️', GOGGLES:'🥽', LABCOAT:'🥼',
+    SAFETYVEST:'🦺', NECKTIE:'👔', TSHIRT:'👕', JEANS:'👖',
+    SCARF:'🧣', GLOVES:'🧤', COAT:'🧥', SOCKS:'🧦',
+    DRESS:'👗', KIMONO:'👘', SARI:'🥻', SWIMSUIT:'🩱',
+    BRIEFS:'🩲', SHORTS:'🩳', BIKINI:'👙', CLOTHES:'👚',
+    FAN:'🪭', PURSE:'👛', HANDBAG:'👜', CLUTCH:'👝',
+    SHOPPINGBAGS:'🛍️', BACKPACK:'🎒', SANDAL:'🩴',
+    SHOE:'👞', RUNNINGSHOE:'👟', BOOT:'🥾', FLATSHOE:'🥿',
+    HEEL:'👠', BALLETSHOES:'🩰', CROWN:'👑', HAT:'👒',
+    TOPHAT:'🎩', CAP:'🧢', HELMET:'🪖', BEADS:'📿',
+    LIPSTICK:'💄', RING:'💍', GEM:'💎',
+
+    // Instruments
+    SAXOPHONE:'🎷', ACCORDION:'🪗', GUITAR:'🎸', KEYBOARD:'🎹',
+    PIANO:'🎹', TRUMPET:'🎺', VIOLIN:'🎻', BANJO:'🪕',
+    DRUM:'🥁', LONGDRUM:'🪘', MARACAS:'🪇', FLUTE:'🪈',
+    HARP:'🪉'
   };
 
   // Build on-screen keyboard (QWERTY)
@@ -1422,11 +1434,148 @@
     displayStats(statsVisible);
   });
 
+  // ---------------------------------
+  // WORD CATEGORIES (authoritative)
+  // ---------------------------------
+  const WORD_CATEGORIES = {
+    ALL: [],
+
+    BIRDS: [
+      'BIRD','TURKEY','CHICKEN','ROOSTER','CHICK','PENGUIN','DOVE','EAGLE','DUCK',
+      'SWAN','OWL','DODO','FLAMINGO','PEACOCK','PARROT','CROW','GOOSE','PHOENIX'
+    ],
+
+    ANIMALS: [
+      'MONKEY','GORILLA','ORANGUTAN','DOG','POODLE','WOLF','FOX','RACCOON','CAT',
+      'LION','TIGER','LEOPARD','HORSE','MOOSE','DONKEY','UNICORN','ZEBRA','DEER',
+      'BISON','COW','OX','WATERBUFFALO','PIG','BOAR','RAM','EWE','GOAT','CAMEL',
+      'LLAMA','GIRAFFE','ELEPHANT','MAMMOTH','RHINOCEROS','HIPPOPOTAMUS','MOUSE',
+      'RAT','HAMSTER','RABBIT','CHIPMUNK','BEAVER','HEDGEHOG','BAT','BEAR',
+      'POLARBEAR','KOALA','PANDA','SLOTH','OTTER','SKUNK','KANGAROO','BADGER',
+      'FROG','CROCODILE','TURTLE','LIZARD','SNAKE','DRAGON','SAUROPOD','DINOSAUR'
+    ],
+
+    SEA_ANIMALS: [
+      'WHALE','DOLPHIN','SEAL','FISH','BLOWFISH','SHARK','OCTOPUS',
+      'CRAB','LOBSTER','SHRIMP','SQUID','OYSTER','CORAL','JELLYFISH'
+    ],
+
+    BUGS: [
+      'SNAIL','BUTTERFLY','BUG','ANT','HONEYBEE','BEETLE','LADYBEETLE',
+      'CRICKET','COCKROACH','SPIDER','SCORPION','MOSQUITO','FLY','WORM','GERM'
+    ],
+
+    FRUITS: [
+      'GRAPES','MELON','WATERMELON','TANGERINE','LEMON','LIME','BANANA','PINEAPPLE',
+      'MANGO','APPLE','GREENAPPLE','PEAR','PEACH','CHERRIES','STRAWBERRY',
+      'BLUEBERRIES','KIWI','TOMATO','OLIVE','COCONUT'
+    ],
+
+    VEGETABLES: [
+      'MUSHROOM','AVOCADO','EGGPLANT','POTATO','CARROT','CORN','CHILLIE',
+      'CAPSICUM','CUCUMBER','BROCCOLI','GARLIC','ONION','PEANUTS','BEANS',
+      'CHESTNUT','GINGER','PEA','ROOT'
+    ],
+
+    SNACKS: [
+      'BREAD','CROISSANT','BAGUETTE','PRETZEL','BAGEL','PANCAKES','WAFFLE','CHEESE',
+      'MEAT','POULTRY','BACON','HAMBURGER','FRIES','PIZZA','HOTDOG','SANDWICH',
+      'TACO','BURRITO','TAMALE','FLATBREAD','FALAFEL','EGG','FONDUE','SALAD',
+      'POPCORN','BUTTER','SALT','SOFTIE','ICE','ICECREAM','DOUGHNUT','COOKIE',
+      'CAKE','SHORTCAKE','CUPCAKE','PIE','CHOCOLATE','CANDY','LOLLIPOP',
+      'CUSTARD','HONEY'
+    ],
+
+    PLANTS: [
+      'BOUQUET','CHERRYBLOSSOM','LOTUS','ROSETTE','ROSE','HIBISCUS','SUNFLOWER',
+      'BLOSSOM','TULIP','HYACINTH','SEEDLING','POT','PINE','TREE','PALM','CACTUS',
+      'RICE','HERB','SHAMROCK','CLOVER','MAPLE'
+    ],
+
+    CLOTHES: [
+      'GLASSES','SUNGLASSES','GOGGLES','LABCOAT','SAFETYVEST','NECKTIE','TSHIRT',
+      'JEANS','SCARF','GLOVES','COAT','SOCKS','DRESS','KIMONO','SARI','SWIMSUIT',
+      'BRIEFS','SHORTS','BIKINI','CLOTHES','FAN','PURSE','HANDBAG','CLUTCH',
+      'SHOPPINGBAGS','BACKPACK','SANDAL','SHOE','RUNNINGSHOE','BOOT','FLATSHOE',
+      'HEEL','BALLETSHOES','CROWN','HAT','TOPHAT','CAP','HELMET','BEADS',
+      'LIPSTICK','RING','GEM'
+    ],
+
+    INSTRUMENTS: [
+      'SAXOPHONE','ACCORDION','GUITAR','KEYBOARD','PIANO','TRUMPET','VIOLIN',
+      'BANJO','DRUM','LONGDRUM','MARACAS','FLUTE','HARP'
+    ],
+
+    OBJECTS: [
+      'PEN','PENCIL','ERASER','BOOK','CAMERA','PHONE','MOBILE','BOTTLE','BAG',
+      'CHAIR','TABLE','CLOCK','LIGHTBULB','KEY'
+    ],
+
+    NATURE: [
+      'SUN','MOON','STAR','CLOUD','RAINBOW','UMBRELLA','SNOW','SNOWMAN',
+      'WAVE','LIGHTNING'
+    ]
+  };
+
+  // Build ALL dynamically (never loses words)
+  WORD_CATEGORIES.ALL = Array.from(
+    new Set(Object.values(WORD_CATEGORIES).flat())
+  );
+  // ---------------------------------
+  // D) WIRE BUTTON (non-destructive)
+  // ---------------------------------
   UI.demoBtn.addEventListener('click', () => {
-    UI.wordInput.value = 'sun cloud umbrella snowman snow rainbow wave moon star sparkle plant tree palm cactus tulip flower rose sunflower clover leaf mushroom apple banana grapes strawberry watermelon pineapple cherry peach lemon cookie donut icecream chocolate candy lollipop cake popcorn bottle car bus train rocket plane boat bike dog cat mouse rabbit bear panda koala tiger lion frog monkey penguin bird butterfly bee turtle dolphin fish elephant unicorn balloon gift bow party paint pencil book game dice music guitar drum trophy happy laugh sleep cool';
-    showMessage('Added kid words!', 'good');
-    setBubble('Press Start now!');
-    setCharacter('neutral');
+    openCategoryPicker();
+  });
+  // ---------------------------------
+  // C) CATEGORY LOGIC (JS)
+  // ---------------------------------
+  // Just BEFORE `// Initial screen`, add:
+  const categoryOverlay = document.getElementById('categoryOverlay');
+  const categoryGrid = document.getElementById('categoryGrid');
+
+  function openCategoryPicker() {
+    const categoryOverlay = document.getElementById('categoryOverlay');
+    const categoryGrid = document.getElementById('categoryGrid');
+
+    if (!categoryOverlay || !categoryGrid) {
+      console.error('Category overlay elements not found (categoryOverlay/categoryGrid).');
+      return;
+    }
+
+    categoryGrid.innerHTML = '';
+
+    Object.keys(WORD_CATEGORIES).forEach(cat => {
+      const btn = document.createElement('button');
+      btn.className = 'btn secondary';
+      btn.type = 'button';
+      btn.textContent = cat.replace(/_/g, ' ');
+
+      btn.addEventListener('click', () => {
+        UI.wordInput.value = WORD_CATEGORIES[cat].join(' ');
+        showMessage(`Loaded ${cat}!`, 'good');
+        categoryOverlay.style.display = 'none';
+      });
+
+      categoryGrid.appendChild(btn);
+    });
+
+    categoryOverlay.style.display = 'grid';
+
+    // tap outside closes
+    categoryOverlay.onclick = () => (categoryOverlay.style.display = 'none');
+    categoryGrid.onclick = (e) => e.stopPropagation();
+  }
+
+  categoryOverlay && categoryOverlay.addEventListener('click', () => categoryOverlay.style.display = 'none');
+  categoryGrid && categoryGrid.addEventListener('click', e => e.stopPropagation());
+  // ---------------------------------
+  // E) SAFETY CHECK (optional but useful)
+  // ---------------------------------
+  // Add near the bottom (before Initial screen):
+  // Dev check: warn if any word has no emoji
+  Object.values(WORD_CATEGORIES).flat().forEach(w => {
+    if (!emojiHints[w]) console.warn('Missing emoji for:', w);
   });
 
   // External keyboard toggle: handle enabling/disabling keydown listener and hints
@@ -1485,4 +1634,5 @@
 </script>
 
 </body>
+
 </html>
