@@ -1,0 +1,1481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Rainbow Typing Game</title>
+<style>
+  :root {
+    --bg1: #ffe6f7;
+    --bg2: #efe3ff;
+    --card: rgba(255,255,255,0.82);
+    --card2: rgba(255,255,255,0.68);
+    --ink: #2b1b2f;
+    --muted: rgba(43,27,47,0.65);
+    --pink: #ff4fb6;
+    --purple: #8b5cff;
+    --gold: #ffcc4d;
+    --good: #1a9b5a;
+    --bad: #d64545;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  /* Prevent accidental selection/callouts across the app (keep inputs editable) */
+  body, .wrap, .card, .cardSub, .btn, .toggle, .hud, .stat, #textBox, #messageDisplay, .bubble, #kb, .kbPanel {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  input, textarea {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+  }
+  /* Micro-rewards */
+  .charBounce {
+    animation: charBounce 520ms ease-out;
+  }
+  @keyframes charBounce {
+    0% { transform: translateY(0) scale(1); }
+    30% { transform: translateY(-10px) scale(1.03); }
+    60% { transform: translateY(0) scale(1.00); }
+    100% { transform: translateY(-2px) scale(1.01); }
+  }
+
+  .kbPulse {
+    animation: kbPulse 420ms ease-out;
+  }
+  @keyframes kbPulse {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+  }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: ui-rounded, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(circle at 15% 10%, rgba(255,79,182,0.22), transparent 40%),
+      radial-gradient(circle at 85% 18%, rgba(139,92,255,0.22), transparent 42%),
+      linear-gradient(135deg, var(--bg1), var(--bg2));
+    overflow-x: hidden;
+  }
+
+  /* Soft rainbow stripe */
+  .rainbowBar {
+    height: 10px;
+    background: linear-gradient(90deg, #ff4fb6, #ff7ad1, #ffcc4d, #67d5ff, #8b5cff);
+  }
+
+  .wrap {
+    width: min(1100px, 96vw);
+    margin: 14px auto 26px auto;
+    padding-bottom: 24px;
+  }
+
+  .top {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 12px 0 12px;
+  }
+
+  .title {
+    flex: 1;
+    line-height: 1.1;
+  }
+
+  .title h1 {
+    font-size: clamp(22px, 3vw, 34px);
+    margin: 0;
+    letter-spacing: 0.2px;
+  }
+
+  .title p {
+    margin: 6px 0 0 0;
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.75);
+    border: 1px solid rgba(0,0,0,0.06);
+    padding: 10px 12px;
+    border-radius: 999px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    user-select: none;
+  }
+
+  .pill strong { font-size: 14px; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 14px;
+    padding: 12px;
+    align-items: stretch;
+  }
+
+  #scaleWrapper{
+    width: 100%;
+    height: calc(100vh - 10px); /* rainbowBar is 10px */
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 12px 0 18px 0;
+    overflow: hidden;
+  }
+
+  #scaleInner{
+    transform: scale(var(--appScale, 1));
+    transform-origin: top center;
+    width: 1100px; /* base design width */
+  }
+
+  @media (max-width: 860px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+
+  #gameCard{
+    display: flex;
+    flex-direction: column;
+  }
+
+  .bottomToggles{
+    margin-top: auto !important;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;  /* allows wrapping on narrow widths */
+  }
+
+  .card {
+    background: var(--card);
+    height: 100%;
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 18px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.10);
+    padding: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cardSub {
+    background: var(--card2);
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 16px;
+    padding: 12px;
+  }
+
+  .row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .btn {
+    appearance: none;
+    border: 0;
+    border-radius: 16px;
+    padding: 14px 16px;
+    font-weight: 800;
+    font-size: 18px;
+    cursor: pointer;
+    background: linear-gradient(135deg, var(--pink), var(--purple));
+    color: #fff;
+    box-shadow: 0 12px 26px rgba(139,92,255,0.18);
+    transition: transform 0.06s ease, filter 0.2s ease;
+    user-select: none;
+  }
+  .btn:active { transform: scale(0.98); filter: brightness(0.98); }
+
+  .btn.secondary {
+    background: rgba(255,255,255,0.9);
+    color: var(--ink);
+    border: 1px solid rgba(0,0,0,0.10);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.08);
+  }
+
+  .btn.ghost {
+    background: transparent;
+    color: var(--ink);
+    border: 1px dashed rgba(0,0,0,0.18);
+    box-shadow: none;
+  }
+
+  .toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.8);
+    border: 1px solid rgba(0,0,0,0.06);
+    user-select: none;
+  }
+  .toggle input { width: 18px; height: 18px; }
+
+  .input {
+    width: min(820px, 100%);
+    border-radius: 14px;
+    border: 1px solid rgba(0,0,0,0.10);
+    padding: 14px 14px;
+    font-size: 18px;
+    outline: none;
+    background: rgba(255,255,255,0.9);
+  }
+
+  .helper {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 8px;
+    line-height: 1.35;
+  }
+
+  /* Word display */
+  #textBox {
+    font-size: clamp(42px, 6vw, 84px);
+    width: 100%;
+    padding: 10px 12px;
+    text-align: center;
+    letter-spacing: 1.6px;
+    user-select: none;
+  }
+  .typed { color: var(--good); }
+  .rest { color: rgba(43,27,47,0.35); }
+  .next {
+    background: var(--gold);
+    color: #1b1b1b;
+    border-radius: 10px;
+    padding: 2px 8px;
+    margin: 0 2px;
+    box-shadow: 0 10px 18px rgba(0,0,0,0.10);
+  }
+
+/* Message (keep space reserved to avoid layout jump) */
+  #messageDisplay{
+    visibility: hidden;
+    opacity: 0;
+    font-size: clamp(20px, 3vw, 36px);
+    font-weight: 900;
+    text-align: center;
+    padding: 10px 10px 0 10px;
+    color: var(--good);
+    text-shadow: 0 2px 0 rgba(255,255,255,0.65);
+    min-height: 52px;
+    transition: opacity 160ms ease;
+  }
+
+  /* Progress / score */
+  .hud {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-top: 10px;
+    align-items: stretch;
+  }
+  @media (max-width: 540px) {
+    .hud { grid-template-columns: 1fr; }
+  }
+
+  .stat{
+    background: rgba(255,255,255,0.86);
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 16px;
+    padding: 10px 12px;
+    text-align: center;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    height: 128px;
+  }
+  .stat .k { font-size: 12px; color: var(--muted); }
+  .stat .v{
+    font-size: 20px;
+    font-weight: 900;
+    margin-top: 0;
+  }
+
+  .barOuter {
+    height: 12px;
+    background: rgba(0,0,0,0.08);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 6px;
+  }
+  .barInner {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #ff4fb6, #ffcc4d, #67d5ff, #8b5cff);
+    border-radius: 999px;
+    transition: width 0.25s ease;
+  }
+
+  /* Character */
+  .charWrap {
+    display: grid;
+    place-items: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+  }
+  .charCrop {
+    width: 100%;
+    max-width: 260px;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+  }
+
+  #charImg {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    user-select: none;
+    -webkit-user-drag: none;
+    filter: drop-shadow(0 18px 24px rgba(0,0,0,0.14));
+  }
+
+  .bubble {
+    width: 100%;
+    background: rgba(255,255,255,0.88);
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 16px;
+    padding: 10px 12px;
+    text-align: center;
+    font-weight: 800;
+    min-height: 46px;
+  }
+
+
+  /* On-screen keyboard (QWERTY) */
+  #kb {
+    display: block;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(0,0,0,0.18);
+    width: 100%;
+    max-width: 100%;
+    --keyw: clamp(24px, 3.2vw, 30px);
+  }
+
+  .kbRows {
+    display: grid;
+    gap: 8px;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+
+  .kbRow{
+    display: grid;
+    gap: 6px;
+    max-width: 100%;
+    padding: 0;
+    justify-content: center;
+    margin: 0 auto;
+    width: fit-content;
+  }
+
+  /* QWERTY staggering like a real keyboard (transform avoids overflow) */
+
+  .key{
+    background: rgba(255,255,255,0.92);
+    border: 1px solid rgba(0,0,0,0.12);
+    border-radius: 14px;
+    font-weight: 900;
+    font-size: clamp(12px, 1.5vw, 15px);
+    cursor: pointer;
+    user-select: none;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+    width: var(--keyw);
+    height: 34px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    line-height: 1;
+  }
+
+  .kbPanel{
+    width: 100%;
+    max-width: 380px;
+    margin: 10px auto 0 auto;
+    padding: 12px;
+    border-radius: 16px;
+    border: 1px solid rgba(0,0,0,0.06);
+    background: linear-gradient(135deg, rgba(255,79,182,0.10), rgba(139,92,255,0.10));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.55);
+  }
+
+  .key:active { transform: scale(0.98); }
+
+  .key.good {
+    border-color: rgba(255,79,182,1);
+    background: rgba(255,79,182,0.35);
+    box-shadow:
+      0 0 0 4px rgba(255,79,182,0.40),
+      0 0 22px rgba(255,79,182,0.55),
+      0 16px 28px rgba(255,79,182,0.25);
+    transform: translateY(-1px);
+  }
+
+  @media (max-width: 520px) {
+    .kbRow { gap: 5px; }
+    .key { height: 32px; }
+  }
+
+  @media (max-width: 380px) {
+  }
+
+  /* Tiny sparkle animation */
+  .sparkle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--gold);
+    pointer-events: none;
+    opacity: 0;
+    animation: pop 600ms ease-out forwards;
+  }
+  @keyframes pop {
+    0% { transform: translate(0,0) scale(0.7); opacity: 0; }
+    15% { opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) scale(0.2); opacity: 0; }
+  }
+
+  /* Stats */
+  #statsDisplay { display: none; margin-top: 10px; }
+  #statsDisplay h2 { margin: 6px 0 10px 0; }
+  #statsDisplay p { margin: 6px 0; }
+
+  /* Simple unicorn corner */
+  .unicorn {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    font-size: 24px;
+    opacity: 0.6;
+    user-select: none;
+  }
+
+  /* Overlay modal */
+  .overlay{
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 10, 24, 0.25);
+    display: grid;
+    place-items: center;
+    padding: 18px;
+    z-index: 9999;
+  }
+  .overlayCard{
+    width: min(520px, 92vw);
+    max-height: min(70vh, 520px);
+    overflow: auto;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid rgba(0,0,0,0.10);
+    border-radius: 18px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.20);
+    padding: 14px 14px 16px 14px;
+    position: relative;
+  }
+  .overlayClose{
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    border: 1px solid rgba(0,0,0,0.10);
+    background: rgba(255,255,255,0.95);
+    font-weight: 900;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+  <div class="rainbowBar"></div>
+  <div id="scaleWrapper">
+    <div id="scaleInner">
+      <div class="wrap">
+
+        <div class="grid">
+
+          <!-- MAIN GAME -->
+          <div class="card" id="gameCard">
+            <div class="unicorn" aria-hidden="true">🦄🌈</div>
+
+            <div class="cardSub">
+              <div class="row" style="gap: 12px;">
+                <input class="input" type="text" id="wordInput" placeholder="Type words here… e.g. cat dog sun unicorn" />
+                <button class="btn" id="startBtn">Load & Start</button>
+                <button class="btn secondary" id="nextWordBtn">Next</button>
+                <button class="btn secondary" id="statsBtn">Stats</button>
+                <button class="btn ghost" id="demoBtn" title="Load a friendly starter list">Get kid words</button>
+              </div>
+            </div>
+
+            <div id="messageDisplay"></div>
+            <div id="textBox" class="rest" aria-live="polite"></div>
+
+            <div class="hud">
+              <div class="stat">
+                <div class="k">Stars</div>
+                <div class="v" id="stars">0 ⭐</div>
+                <div class="barOuter" aria-hidden="true"><div class="barInner" id="bar"></div></div>
+              </div>
+              <div class="stat">
+                <div class="k">Streak</div>
+                <div class="v" id="streak">0</div>
+                <div class="k" id="best">Best: 0</div>
+              </div>
+              <div class="stat">
+                <div class="v" id="pictureStat" style="font-size:75px; line-height:1.1;">✨</div>
+              </div>
+            </div>
+            <div class="row bottomToggles" style="margin-top: 10px;">
+              <label class="toggle"><input type="checkbox" id="sayWordToggle" checked /> Say the word</label>
+              <label class="toggle"><input type="checkbox" id="sayLetterToggle" checked /> Say letters</label>
+              <label class="toggle"><input type="checkbox" id="soundToggle" checked /> Sounds</label>
+              <label class="toggle"><input type="checkbox" id="extKeyboardToggle" /> External keyboard</label>
+            </div>
+
+          </div>
+
+          <!-- CHARACTER PANEL -->
+          <div class="card">
+            <div class="charWrap">
+              <div class="charCrop" aria-hidden="true">
+                <img id="charImg" src="char_neutral.png" alt="Character" />
+              </div>
+              <div class="bubble" id="charBubble">Press Start!</div>
+
+              <div id="kb" style="width:100%;">
+                <div class="kbPanel">
+                  <div class="kbRows" id="kbGrid"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+<!-- Stats overlay (tap anywhere to close) -->
+<div id="statsOverlay" class="overlay" style="display:none;" role="dialog" aria-modal="true">
+  <div class="overlayCard" id="statsOverlayCard">
+    <button class="overlayClose" id="statsCloseBtn" type="button" aria-label="Close">✕</button>
+    <div id="statsDisplay"></div>
+  </div>
+</div>
+
+
+
+<script>
+  // -----------------------------
+  // State
+  // -----------------------------
+  let currentWords = [];
+  let stats = [];
+  let activeWord = "";
+  let currentIndex = 0;
+  let startTime = null;
+  let timerRaf = null;
+
+  let stars = 0;
+  let streak = 0;
+  let bestStreak = 0;
+  let level = 1;
+
+  // Audio (WebAudio + optional speech)
+  let audioCtx = null;
+
+  const UI = {
+    wordInput: document.getElementById('wordInput'),
+    startBtn: document.getElementById('startBtn'),
+    nextBtn: document.getElementById('nextWordBtn'),
+    statsBtn: document.getElementById('statsBtn'),
+    demoBtn: document.getElementById('demoBtn'),
+
+    sayWordToggle: document.getElementById('sayWordToggle'),
+    soundToggle: document.getElementById('soundToggle'),
+    sayLetterToggle: document.getElementById('sayLetterToggle'),
+    extKeyboardToggle: document.getElementById('extKeyboardToggle'),
+
+    textBox: document.getElementById('textBox'),
+    message: document.getElementById('messageDisplay'),
+    statsDisplay: document.getElementById('statsDisplay'),
+    statsOverlay: document.getElementById('statsOverlay'),
+    statsOverlayCard: document.getElementById('statsOverlayCard'),
+    statsCloseBtn: document.getElementById('statsCloseBtn'),
+
+    stars: document.getElementById('stars'),
+    streak: document.getElementById('streak'),
+    best: document.getElementById('best'),
+    pictureStat: document.getElementById('pictureStat'),
+    bar: document.getElementById('bar'),
+
+    kb: document.getElementById('kb'),
+    kbGrid: document.getElementById('kbGrid'),
+
+    charImg: document.getElementById('charImg'),
+    charBubble: document.getElementById('charBubble'),
+    gameCard: document.getElementById('gameCard')
+  };
+
+  // Simple emoji hints (offline-friendly). Curated kid-friendly set.
+  // Keys must be single words that match the game's word list (A-Z only).
+  const emojiHints = {
+    // Nature & sky
+    SUN: '☀️',
+    CLOUD: '☁️',
+    UMBRELLA: '☔',
+    SNOWMAN: '☃',
+    SNOW: '❄️',
+    RAINBOW: '🌈',
+    WAVE: '🌊',
+    MOON: '🌙',
+    STAR: '⭐',
+    SPARKLE: '✨',
+    PLANT: '🌱',
+    TREE: '🌳',
+    PALM: '🌴',
+    CACTUS: '🌵',
+    TULIP: '🌷',
+    FLOWER: '🌸',
+    ROSE: '🌹',
+    SUNFLOWER: '🌻',
+    CLOVER: '🍀',
+    LEAF: '🍁',
+    MUSHROOM: '🍄',
+
+    // Fruits & snacks
+    APPLE: '🍎',
+    BANANA: '🍌',
+    GRAPES: '🍇',
+    STRAWBERRY: '🍓',
+    WATERMELON: '🍉',
+    PINEAPPLE: '🍍',
+    CHERRY: '🍒',
+    PEACH: '🍑',
+    LEMON: '🍋',
+    COOKIE: '🍪',
+    DONUT: '🍩',
+    ICECREAM: '🍦',
+    CHOCOLATE: '🍫',
+    CANDY: '🍬',
+    LOLLIPOP: '🍭',
+    CAKE: '🎂',
+    POPCORN: '🍿',
+    BOTTLE: '🍼',
+
+    // Vehicles
+    CAR: '🚗',
+    BUS: '🚌',
+    TRAIN: '🚆',
+    ROCKET: '🚀',
+    PLANE: '✈️',
+    BOAT: '⛵',
+    BIKE: '🚲',
+
+    // Animals
+    DOG: '🐶',
+    CAT: '🐱',
+    MOUSE: '🐭',
+    RABBIT: '🐰',
+    BEAR: '🐻',
+    PANDA: '🐼',
+    KOALA: '🐨',
+    TIGER: '🐯',
+    LION: '🦁',
+    FROG: '🐸',
+    MONKEY: '🐵',
+    PENGUIN: '🐧',
+    BIRD: '🐦',
+    BUTTERFLY: '🦋',
+    BEE: '🐝',
+    TURTLE: '🐢',
+    DOLPHIN: '🐬',
+    FISH: '🐟',
+    ELEPHANT: '🐘',
+    UNICORN: '🦄',
+
+    // Toys & fun
+    BALLOON: '🎈',
+    GIFT: '🎁',
+    BOW: '🎀',
+    PARTY: '🎉',
+    PAINT: '🎨',
+    PENCIL: '✏️',
+    BOOK: '📚',
+    GAME: '🎮',
+    DICE: '🎲',
+    MUSIC: '🎵',
+    GUITAR: '🎸',
+    DRUM: '🥁',
+    TROPHY: '🏆',
+
+    // Feelings (optional)
+    HAPPY: '😀',
+    LAUGH: '😂',
+    SLEEP: '😴',
+    COOL: '😎'
+  };
+
+  // Build on-screen keyboard (QWERTY)
+  const qwertyRows = [
+    "QWERTYUIOP",
+    "ASDFGHJKL",
+    "ZXCVBNM"
+  ];
+
+  function buildKeyboard() {
+    UI.kbGrid.innerHTML = "";
+
+    qwertyRows.forEach((rowStr) => {
+      const row = document.createElement('div');
+      row.className = 'kbRow';
+      row.style.gridTemplateColumns = `repeat(${rowStr.length}, var(--keyw))`;
+      row.style.justifyContent = 'center';
+
+      rowStr.split("").forEach((ch) => {
+        const b = document.createElement('button');
+        b.className = 'key';
+        b.type = 'button';
+        b.textContent = ch;
+        // On-screen key input: use ONE primary event to avoid double-fires.
+        // PointerEvent covers mouse + touch on modern browsers.
+        const fire = (ev) => {
+          if (ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+          }
+          b.blur();
+          onLetterInput(ch, { source: 'onscreen' });
+        };
+
+        if (window.PointerEvent) {
+          b.addEventListener('pointerdown', fire, { passive: false });
+          // Prevent the subsequent synthetic click from also triggering anything
+          b.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+          });
+        } else {
+          // Older fallback: touchstart/mousedown (still single-fire)
+          b.addEventListener('touchstart', fire, { passive: false });
+          b.addEventListener('mousedown', fire);
+          b.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+          });
+        }
+        row.appendChild(b);
+      });
+
+      UI.kbGrid.appendChild(row);
+    });
+  }
+
+  buildKeyboard();
+
+  function setKeyboardHint(nextChar) {
+    const keys = UI.kbGrid.querySelectorAll('.key');
+
+    // Only show highlight guidance when an external (hardware) keyboard is enabled.
+    const allowHint = UI.extKeyboardToggle && UI.extKeyboardToggle.checked;
+
+    keys.forEach(k => {
+      k.classList.remove('good');
+      if (allowHint && nextChar && k.textContent === nextChar) k.classList.add('good');
+    });
+  }
+
+  // -----------------------------
+  // Debug helpers
+  // -----------------------------
+  const DBG = {
+    enabled: false,
+    lines: [],
+    max: 80,
+    push(line) {
+      const ts = new Date().toLocaleTimeString();
+      const msg = `[${ts}] ${line}`;
+      this.lines.push(msg);
+      if (this.lines.length > this.max) this.lines.shift();
+      if (this.enabled && UI.debugLine) UI.debugLine.textContent = this.lines.join('\n');
+      // Always log to console for deeper inspection
+      console.log(msg);
+    }
+  };
+
+  function refreshSpeechSnapshot(tag = '') {
+    const has = ('speechSynthesis' in window);
+    const synth = has ? window.speechSynthesis : null;
+    const speaking = synth ? synth.speaking : false;
+    const pending = synth ? synth.pending : false;
+    const paused = synth ? synth.paused : false;
+    const vCount = (has && synth && typeof synth.getVoices === 'function') ? synth.getVoices().length : 0;
+    const vName = preferredVoice ? `${preferredVoice.name} (${preferredVoice.lang})` : '(none)';
+    DBG.push(`${tag} speechSynthesis=${has} voices=${vCount} preferred=${vName} speaking=${speaking} pending=${pending} paused=${paused}`);
+  }
+
+  // -----------------------------
+  // Speech helpers (robust start)
+  // -----------------------------
+  let speechSeq = 0;
+
+  function stopSpeechSoft() {
+    if (!('speechSynthesis' in window)) return;
+    try {
+      // Avoid immediate cancel->speak in same tick (can cause silent failures).
+      window.speechSynthesis.pause();
+      window.speechSynthesis.resume();
+    } catch (_) {}
+  }
+
+  function safeSpeak(text, opts = {}) {
+    if (!('speechSynthesis' in window)) return;
+    const t = String(text || '').trim();
+    if (!t) return;
+
+    const {
+      lang = 'en-US',
+      rate = 0.98,
+      pitch = 1.12,
+      volume = 1.0,
+      preferVoice = true,
+      debugTag = 'safeSpeak'
+    } = opts;
+
+    const seq = ++speechSeq;
+
+    // Schedule speech on next frame - avoids cancel/resume race conditions.
+    requestAnimationFrame(() => {
+      if (seq !== speechSeq) return;
+      try {
+        initVoices();
+        stopSpeechSoft();
+        refreshSpeechSnapshot(debugTag + ' pre');
+
+        const u = new SpeechSynthesisUtterance(t);
+        u.lang = lang;
+        u.rate = rate;
+        u.pitch = pitch;
+        u.volume = volume;
+
+        if (preferVoice && preferredVoice) {
+          try { u.voice = preferredVoice; } catch (_) {}
+        }
+
+        let started = false;
+        const startGuard = setTimeout(() => {
+          if (started) return;
+          // If onstart never fired, retry with engine default voice.
+          DBG.push(debugTag + ' retry: onstart did not fire, using engine default');
+          try { window.speechSynthesis.cancel(); } catch (_) {}
+
+          requestAnimationFrame(() => {
+            try {
+              const u2 = new SpeechSynthesisUtterance(t);
+              u2.lang = lang;
+              u2.rate = rate;
+              u2.pitch = pitch;
+              u2.volume = volume;
+              u2.onstart = () => DBG.push(debugTag + ' retry onstart');
+              u2.onend = () => DBG.push(debugTag + ' retry onend');
+              u2.onerror = (e) => DBG.push(debugTag + ' retry onerror ' + (e && e.error ? e.error : 'unknown'));
+              // NOTE: do NOT set u2.voice - let engine pick.
+              window.speechSynthesis.speak(u2);
+              refreshSpeechSnapshot(debugTag + ' retry post');
+            } catch (e2) {
+              DBG.push(debugTag + ' retry exception');
+            }
+          });
+        }, 250);
+
+        u.onstart = () => {
+          started = true;
+          clearTimeout(startGuard);
+          DBG.push(debugTag + ' onstart');
+        };
+        u.onend = () => {
+          clearTimeout(startGuard);
+          DBG.push(debugTag + ' onend');
+        };
+        u.onerror = (e) => {
+          clearTimeout(startGuard);
+          DBG.push(debugTag + ' onerror ' + (e && e.error ? e.error : 'unknown'));
+        };
+
+        window.speechSynthesis.speak(u);
+        refreshSpeechSnapshot(debugTag + ' post');
+      } catch (e) {
+        DBG.push(debugTag + ' exception');
+      }
+    });
+  }
+
+  // -----------------------------
+  // Speech voice selection (helps Safari/macOS)
+  // -----------------------------
+  let preferredVoice = null;
+  function initVoices() {
+    if (!('speechSynthesis' in window)) return;
+    const voices = window.speechSynthesis.getVoices();
+    if (!voices || !voices.length) return;
+
+    // Strong preference list for voices that are usually audible on macOS.
+    // (Some system voices can exist but be effectively silent depending on OS packs/output.)
+    const preferredNames = [
+      'Samantha', 'Alex', 'Victoria', 'Karen', 'Moira', 'Tessa', 'Daniel',
+      'Aaron', 'Fred', 'Tom', 'Serena'
+    ];
+
+    const byName = preferredNames
+      .map(n => voices.find(v => v.name === n))
+      .find(Boolean);
+
+    const byLangUS = voices.find(v => /^en[-_]?US$/i.test(v.lang));
+    const byLangGB = voices.find(v => /^en[-_]?GB$/i.test(v.lang));
+    const byLangEN = voices.find(v => /^en/i.test(v.lang));
+
+    preferredVoice = byName || byLangUS || byLangGB || byLangEN || voices[0];
+
+    DBG.push(`initVoices picked: ${preferredVoice ? preferredVoice.name + ' / ' + preferredVoice.lang : 'none'}`);
+  }
+
+  if ('speechSynthesis' in window) {
+    initVoices();
+    window.speechSynthesis.onvoiceschanged = () => initVoices();
+  }
+
+  function speakNow(utterance) {
+    if (!('speechSynthesis' in window)) return;
+    try {
+      initVoices();
+      if (preferredVoice && utterance) {
+        try { utterance.voice = preferredVoice; } catch (_) {}
+      }
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  function speak(text) {
+    DBG.push(`speak() "${String(text || '').slice(0, 60)}" toggle=${UI.sayWordToggle && UI.sayWordToggle.checked}`);
+    if (!UI.sayWordToggle.checked) return;
+    safeSpeak(text, { debugTag: 'speak' });
+  }
+
+  function speakLetter(letter) {
+    DBG.push(`speakLetter() "${String(letter || '').slice(0, 10)}" toggle=${UI.sayLetterToggle && UI.sayLetterToggle.checked}`);
+    if (!UI.sayLetterToggle || !UI.sayLetterToggle.checked) return;
+    if (!('speechSynthesis' in window)) return;
+
+    // Only say the letter itself, never "capital" or "small"
+    const clean = String(letter || '').trim().slice(0, 1).toLowerCase();
+    if (!/^[a-z]$/.test(clean)) return;
+
+    try {
+      safeSpeak(clean, { lang: 'en-US', rate: 1.12, pitch: 1.22, debugTag: 'letter' });
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  // -----------------------------
+  // WebAudio (sine tone sequences)
+  // -----------------------------
+  function ensureAudio() {
+    if (!UI.soundToggle.checked) return;
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+  }
+
+  function tone(freq, dur = 0.09, when = 0) {
+    if (!UI.soundToggle.checked) return;
+    if (!audioCtx) return;
+
+    const t0 = audioCtx.currentTime + when;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, t0);
+
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.18, t0 + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.02);
+  }
+
+  function playSuccess() {
+    ensureAudio();
+    if (!audioCtx) return;
+    // cheerful arpeggio
+    tone(523.25, 0.09, 0.00); // C5
+    tone(659.25, 0.09, 0.10); // E5
+    tone(783.99, 0.10, 0.20); // G5
+    tone(1046.5, 0.14, 0.30); // C6
+  }
+
+  function playTick() {
+    ensureAudio();
+    if (!audioCtx) return;
+    tone(880, 0.05, 0.0);
+  }
+
+  function playOops() {
+    ensureAudio();
+    if (!audioCtx) return;
+    tone(196, 0.10, 0.0);
+    tone(160, 0.12, 0.12);
+  }
+
+  // -----------------------------
+  // UI helpers
+  // -----------------------------
+  function setCharacter(state) {
+    // state: 'neutral' | 'think' | 'excited'
+    const src = state === 'excited' ? 'char_excited.png' : (state === 'think' ? 'char_think.png' : 'char_neutral.png');
+    UI.charImg.src = src;
+  }
+
+  function setBubble(text) {
+    UI.charBubble.textContent = text;
+  }
+
+  function showMessage(text, kind = 'good') {
+    UI.message.style.color = kind === 'good' ? 'var(--good)' : 'var(--bad)';
+    UI.message.textContent = text;
+
+    UI.message.style.visibility = 'visible';
+    UI.message.style.opacity = '1';
+
+    setTimeout(() => {
+      UI.message.style.opacity = '0';
+      setTimeout(() => {
+        UI.message.style.visibility = 'hidden';
+        UI.message.textContent = '';
+      }, 180);
+    }, 1800);
+  }
+
+  function sparkleBurst(count = 10) {
+    // Tiny sparkles from center of card
+    const rect = UI.gameCard.getBoundingClientRect();
+    const cx = rect.width * 0.5;
+    const cy = rect.height * 0.25;
+
+    for (let i = 0; i < count; i++) {
+      const s = document.createElement('div');
+      s.className = 'sparkle';
+      const ang = (Math.PI * 2 * i) / count;
+      const r = 40 + Math.random() * 80;
+      const dx = Math.cos(ang) * r;
+      const dy = Math.sin(ang) * r;
+      s.style.left = (cx + (Math.random() * 8 - 4)) + 'px';
+      s.style.top = (cy + (Math.random() * 8 - 4)) + 'px';
+      s.style.setProperty('--dx', dx + 'px');
+      s.style.setProperty('--dy', dy + 'px');
+      UI.gameCard.appendChild(s);
+      setTimeout(() => s.remove(), 700);
+    }
+  }
+  // Helper: blur all except the word list input to avoid OS keyboard popping up
+  function blurIfNotWordInput() {
+    const ae = document.activeElement;
+    if (ae && ae !== UI.wordInput) {
+      try { ae.blur(); } catch (_) {}
+    }
+  }
+
+  function updateHUD() {
+    UI.stars.textContent = `${stars} ⭐`;
+    UI.streak.textContent = `${streak}`;
+    UI.best.textContent = `Best: ${bestStreak}`;
+
+    const p = activeWord.length ? Math.min(100, Math.round((currentIndex / activeWord.length) * 100)) : 0;
+    UI.bar.style.width = p + '%';
+  }
+
+  function setHintForWord(word) {
+    const w = (word || '').toUpperCase();
+    const em = emojiHints[w] || '✨';
+    // Big picture in HUD
+    if (UI.pictureStat) UI.pictureStat.textContent = em;
+  }
+
+  function updateDisplay() {
+    if (!activeWord) {
+      UI.textBox.innerHTML = '<span class="rest">Press Start</span>';
+      return;
+    }
+
+    const part1 = activeWord.substring(0, currentIndex);
+    const nextLetter = activeWord.substring(currentIndex, currentIndex + 1);
+    const part2 = activeWord.substring(currentIndex + 1);
+
+    UI.textBox.innerHTML =
+      '<span class="typed">' + part1 + '</span>' +
+      '<span class="next">' + (nextLetter || '') + '</span>' +
+      '<span class="rest">' + part2 + '</span>';
+
+    setKeyboardHint(nextLetter || '');
+    updateHUD();
+  }
+
+  function startTimer() {
+    stopTimer();
+    const loop = () => {
+      if (!startTime) return;
+      timerRaf = requestAnimationFrame(loop);
+    };
+    timerRaf = requestAnimationFrame(loop);
+  }
+
+  function stopTimer() {
+    if (timerRaf) cancelAnimationFrame(timerRaf);
+    timerRaf = null;
+  }
+
+  // -----------------------------
+  // Word list / flow
+  // -----------------------------
+  function parseWords(raw) {
+    const up = (raw || '').toUpperCase().trim();
+    if (!up) return [];
+
+    // split by whitespace, remove empty, keep only A-Z
+    return up
+      .split(/\s+/)
+      .map(w => w.replace(/[^A-Z]/g, ''))
+      .filter(Boolean);
+  }
+
+  function chooseWord() {
+    if (!currentWords.length) return "";
+    return currentWords[Math.floor(Math.random() * currentWords.length)];
+  }
+
+  function beginRound() {
+    if (!currentWords.length) {
+      showMessage('Add some words first!', 'bad');
+      setBubble('Type some words above. Then press Start.');
+      setCharacter('think');
+      return;
+    }
+
+    activeWord = chooseWord();
+    currentIndex = 0;
+    startTime = null;
+
+    setHintForWord(activeWord);
+    setBubble('Can you spell it?');
+    setCharacter('think');
+
+    updateDisplay();
+    blurIfNotWordInput();
+
+    // speak the word (child-friendly)
+    speak(activeWord);
+
+    // attach key listener ONLY when external keyboard is enabled
+    document.removeEventListener('keydown', onKeydown);
+    if (UI.extKeyboardToggle && UI.extKeyboardToggle.checked) {
+      document.addEventListener('keydown', onKeydown);
+    }
+  }
+
+  function completeWord() {
+    const endTime = performance.now();
+    const timeTaken = startTime ? Number(((endTime - startTime) / 1000).toFixed(1)) : 0;
+
+    stats.push({ word: activeWord, timeTaken });
+
+    stars += 1;
+    streak += 1;
+    bestStreak = Math.max(bestStreak, streak);
+
+    // level up every 7 stars
+    level = Math.floor(stars / 7) + 1;
+
+    playSuccess();
+
+    // Bigger celebration every 5 stars
+    const bigCelebrate = (stars % 5 === 0);
+    sparkleBurst(bigCelebrate ? 24 : 10);
+
+    // Small bounce reward every 3 streak
+    const bounce = (streak % 3 === 0);
+    if (bounce && UI.charImg) {
+      UI.charImg.classList.remove('charBounce');
+      // force reflow
+      void UI.charImg.offsetWidth;
+      UI.charImg.classList.add('charBounce');
+    }
+
+    // Subtle keyboard pulse on success (does not reveal anything)
+    const kbPanel = document.querySelector('.kbPanel');
+    if (kbPanel) {
+      kbPanel.classList.remove('kbPulse');
+      void kbPanel.offsetWidth;
+      kbPanel.classList.add('kbPulse');
+    }
+
+    setCharacter('excited');
+    setBubble('Yay! You did it!');
+
+    const visualMsg = `Yay! ${activeWord}! ⭐`;
+    const spokenMsg = `Yay! ${activeWord}!`;
+    showMessage(visualMsg, 'good');
+
+    stopTimer();
+
+    const goNext = () => {
+      setCharacter('neutral');
+      beginRound();
+    };
+
+    // Speak the success message and only then move on
+    if (UI.sayWordToggle.checked && ('speechSynthesis' in window)) {
+      try {
+        // Small pause so the last letter finishes, then say the success phrase.
+        setTimeout(() => {
+          safeSpeak(spokenMsg, { debugTag: 'success', rate: 0.95, pitch: 1.15 });
+        }, 350);
+
+        // Move on after the phrase has had time to play.
+        setTimeout(goNext, 3000);
+      } catch (e) {
+        setTimeout(goNext, 1200);
+      }
+    } else {
+      setTimeout(goNext, 900);
+    }
+  }
+
+  let lastInputAt = 0;
+  function onLetterInput(ch, meta = {}) {
+    const now = performance.now();
+    if (now - lastInputAt < 140) return; // debounce
+    lastInputAt = now;
+    // Avoid triggering OS keyboard by keeping focus off non-input elements
+    blurIfNotWordInput();
+    // called by on-screen keyboard
+    ensureAudio();
+    if (!activeWord) return;
+
+    const expected = activeWord[currentIndex];
+    if (!expected) return;
+
+    const got = (ch || '').toUpperCase();
+
+    if (got === expected) {
+      if (currentIndex === 0) {
+        startTime = performance.now();
+        startTimer();
+      }
+
+      currentIndex++;
+      playTick();
+      speakLetter(got);
+
+      if (currentIndex >= activeWord.length) {
+        // Give the last letter a moment to be heard before the success phrase.
+        setTimeout(() => completeWord(), 650);
+      } else {
+        updateDisplay();
+      }
+    } else {
+      // gentle oops feedback
+      streak = 0;
+      playOops();
+      setCharacter('think');
+      setBubble('Try the highlighted letter!');
+      showMessage('Oops, try again!', 'bad');
+      updateHUD();
+    }
+  }
+
+  function onKeydown(e) {
+    // Ignore physical keyboard input unless explicitly enabled
+    if (!(UI.extKeyboardToggle && UI.extKeyboardToggle.checked)) return;
+    // Ignore key repeat when a key is held down
+    if (e.repeat) return;
+    const key = (e.key || '').toUpperCase();
+
+    // Ignore non-letter keys
+    if (!/^[A-Z]$/.test(key)) return;
+
+    // Make sure audio starts only after user gesture: keydown counts
+    ensureAudio();
+
+    onLetterInput(key, { source: 'external' });
+  }
+
+  // -----------------------------
+  // Stats
+  // -----------------------------
+  let statsVisible = false;
+  function displayStats(show) {
+    if (!show) {
+      UI.statsOverlay.style.display = 'none';
+      return;
+    }
+
+    const total = stats.length;
+    UI.statsDisplay.innerHTML = '<h2 style="margin:6px 0 10px 0;">My Stars</h2>';
+    UI.statsDisplay.innerHTML += `<p style="margin:6px 0;"><b>Total words:</b> ${total}</p>`;
+
+    const recent = stats.slice(-10).reverse();
+    if (recent.length) {
+      UI.statsDisplay.innerHTML += '<p style="margin:10px 0 6px 0;"><b>Recent:</b></p>';
+      recent.forEach(s => {
+        UI.statsDisplay.innerHTML += `<p style="margin:6px 0;">⭐ ${s.word} - ${s.timeTaken}s</p>`;
+      });
+    }
+
+    UI.statsOverlay.style.display = 'grid';
+  }
+
+  // -----------------------------
+  // Controls
+  // -----------------------------
+  UI.startBtn.addEventListener('click', () => {
+    ensureAudio();
+
+    currentWords = parseWords(UI.wordInput.value);
+    stats = [];
+
+    stars = 0;
+    streak = 0;
+    bestStreak = 0;
+    level = 1;
+
+    setCharacter('neutral');
+    setBubble('Let\'s play!');
+
+    beginRound();
+  });
+
+  // Close stats overlay on tap anywhere outside the card
+  if (UI.statsOverlay) {
+    UI.statsOverlay.addEventListener('click', () => {
+      statsVisible = false;
+      displayStats(false);
+    });
+  }
+  if (UI.statsOverlayCard) {
+    UI.statsOverlayCard.addEventListener('click', (e) => e.stopPropagation());
+  }
+  if (UI.statsCloseBtn) {
+    UI.statsCloseBtn.addEventListener('click', () => {
+      statsVisible = false;
+      displayStats(false);
+    });
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && UI.statsOverlay && UI.statsOverlay.style.display !== 'none') {
+      statsVisible = false;
+      displayStats(false);
+    }
+  }); 
+
+  UI.nextBtn.addEventListener('click', () => {
+    ensureAudio();
+    if (!currentWords.length) currentWords = parseWords(UI.wordInput.value);
+    beginRound();
+  });
+
+  UI.statsBtn.addEventListener('click', () => {
+    statsVisible = !statsVisible;
+    displayStats(statsVisible);
+  });
+
+  UI.demoBtn.addEventListener('click', () => {
+    UI.wordInput.value = 'sun cloud umbrella snowman snow rainbow wave moon star sparkle plant tree palm cactus tulip flower rose sunflower clover leaf mushroom apple banana grapes strawberry watermelon pineapple cherry peach lemon cookie donut icecream chocolate candy lollipop cake popcorn bottle car bus train rocket plane boat bike dog cat mouse rabbit bear panda koala tiger lion frog monkey penguin bird butterfly bee turtle dolphin fish elephant unicorn balloon gift bow party paint pencil book game dice music guitar drum trophy happy laugh sleep cool';
+    showMessage('Added kid words!', 'good');
+    setBubble('Press Start now!');
+    setCharacter('neutral');
+  });
+
+  // External keyboard toggle: handle enabling/disabling keydown listener and hints
+  if (UI.extKeyboardToggle) {
+    UI.extKeyboardToggle.addEventListener('change', () => {
+      // Stop listening to physical keydown immediately
+      document.removeEventListener('keydown', onKeydown);
+
+      // If enabled, attach keydown listener
+      if (UI.extKeyboardToggle.checked) {
+        document.addEventListener('keydown', onKeydown);
+      }
+
+      // Refresh hint glow based on current state
+      const nextCh = activeWord ? (activeWord.substring(currentIndex, currentIndex + 1) || '') : '';
+      setKeyboardHint(nextCh);
+    });
+  }
+
+  // Initial screen
+    setCharacter('neutral');
+    setBubble('Press Start!');
+    updateDisplay();
+    updateHUD();
+    setHintForWord('');
+    refreshSpeechSnapshot('boot');
+
+    function computeAppScale(){
+    const wrap = document.querySelector('.wrap');
+    const inner = document.getElementById('scaleInner');
+    const wrapper = document.getElementById('scaleWrapper');
+    if (!wrap || !inner || !wrapper) return;
+
+    const targetW = inner.offsetWidth || 1100;
+    const targetH = wrap.offsetHeight || 700;
+
+    const availW = wrapper.clientWidth;
+    const availH = wrapper.clientHeight;
+
+    const pad = 16;
+    const s = Math.min((availW - pad) / targetW, (availH - pad) / targetH, 1);
+
+    document.documentElement.style.setProperty('--appScale', String(Math.max(0.55, s)));
+  }
+
+  window.addEventListener('resize', computeAppScale);
+  window.addEventListener('orientationchange', computeAppScale);
+  setTimeout(computeAppScale, 50);
+  setTimeout(computeAppScale, 250);
+
+</script>
+
+</body>
+</html>
