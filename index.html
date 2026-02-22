@@ -127,7 +127,8 @@
     justify-content: center;
     align-items: flex-start;
     padding: 12px 0 18px 0;
-    overflow: hidden;
+    overflow-x: hidden;   /* never allow sideways scroll */
+    overflow-y: auto;     /* allow vertical scroll on small screens */
   }
 
   #scaleInner{
@@ -369,6 +370,7 @@
     width: 100%;
     max-width: 100%;
     --keyw: clamp(24px, 3.2vw, 30px);
+    scroll-margin-bottom: 24px;
   }
 
   .kbRows {
