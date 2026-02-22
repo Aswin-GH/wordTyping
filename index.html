@@ -552,7 +552,7 @@
               <label class="toggle"><input type="checkbox" id="sayWordToggle" checked /> Say the word</label>
               <label class="toggle"><input type="checkbox" id="sayLetterToggle" checked /> Say letters</label>
               <label class="toggle"><input type="checkbox" id="soundToggle" checked /> Sounds</label>
-              <label class="toggle"><input type="checkbox" id="extKeyboardToggle" /> External keyboard</label>
+              <label class="toggle"><input type="checkbox" id="extKeyboardToggle" checked /> External keyboard</label>
             </div>
 
           </div>
@@ -1444,6 +1444,11 @@
       const nextCh = activeWord ? (activeWord.substring(currentIndex, currentIndex + 1) || '') : '';
       setKeyboardHint(nextCh);
     });
+  }
+
+  // Apply initial external keyboard state on load
+  if (UI.extKeyboardToggle && UI.extKeyboardToggle.checked) {
+    document.addEventListener('keydown', onKeydown);
   }
 
   // Initial screen
