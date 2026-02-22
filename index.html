@@ -605,6 +605,7 @@ B) CATEGORY PICKER OVERLAY (UI)
   let currentWords = [];
   let stats = [];
   let activeWord = "";
+  let lastWord = ""; // prevents immediate repeats
   let currentIndex = 0;
   let startTime = null;
   let timerRaf = null;
@@ -1196,7 +1197,22 @@ B) CATEGORY PICKER OVERLAY (UI)
 
   function chooseWord() {
     if (!currentWords.length) return "";
-    return currentWords[Math.floor(Math.random() * currentWords.length)];
+    if (currentWords.length === 1) return currentWords[0];
+
+    // Try a few times to avoid picking the same word twice in a row
+    let pick = "";
+    for (let i = 0; i < 10; i++) {
+      pick = currentWords[Math.floor(Math.random() * currentWords.length)];
+      if (pick && pick !== lastWord) break;
+    }
+
+    // If still the same (edge-case), pick the first different one
+    if (pick === lastWord) {
+      const alt = currentWords.find(w => w !== lastWord);
+      if (alt) pick = alt;
+    }
+
+    return pick;
   }
 
   function beginRound() {
@@ -1207,6 +1223,7 @@ B) CATEGORY PICKER OVERLAY (UI)
       return;
     }
 
+    lastWord = activeWord || lastWord;
     activeWord = chooseWord();
     currentIndex = 0;
     startTime = null;
