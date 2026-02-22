@@ -258,7 +258,12 @@
     padding: 2px 8px;
     margin: 0 2px;
     box-shadow: 0 10px 18px rgba(0,0,0,0.10);
+    display: inline-block;
+    transition: opacity 140ms ease;
+    opacity: 1;
   }
+  .next.fadeOut { opacity: 0; }
+  .next.fadeIn  { opacity: 1; }
 
 /* Message (keep space reserved to avoid layout jump) */
   #messageDisplay{
@@ -458,10 +463,97 @@
     100% { transform: translate(var(--dx), var(--dy)) scale(0.2); opacity: 0; }
   }
 
-  /* Stats */
-  #statsDisplay { display: none; margin-top: 10px; }
+  /* Stats (now shown inside an overlay card, so it must be visible) */
+  #statsDisplay { display: block; margin-top: 10px; }
   #statsDisplay h2 { margin: 6px 0 10px 0; }
   #statsDisplay p { margin: 6px 0; }
+  /* ---------------------------------
+     FTUE (First-Time User Experience)
+     --------------------------------- */
+  .ftue-focus {
+    position: relative;
+    z-index: 10001;
+    box-shadow:
+      0 0 0 6px rgba(255,79,182,0.45),
+      0 0 30px rgba(255,79,182,0.35);
+    border-radius: 14px;
+  }
+
+  @keyframes ftuePulse {
+    0% {
+      box-shadow:
+        0 0 0 4px rgba(255,79,182,0.35),
+        0 0 18px rgba(255,79,182,0.35);
+      transform: scale(1);
+    }
+    50% {
+      box-shadow:
+        0 0 0 10px rgba(255,79,182,0.55),
+        0 0 36px rgba(255,79,182,0.6);
+      transform: scale(1.03);
+    }
+    100% {
+      box-shadow:
+        0 0 0 4px rgba(255,79,182,0.35),
+        0 0 18px rgba(255,79,182,0.35);
+      transform: scale(1);
+    }
+  }
+
+  .ftue-pulse {
+    animation: ftuePulse 1.1s ease-in-out infinite;
+  }
+
+  #ftueOverlay .overlayCard{
+    width: min(560px, 92vw);
+  }
+
+  .ftueText{
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.35;
+    color: var(--ink);
+    margin-top: 10px;
+  }
+
+  .ftueNav{
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 14px;
+  }
+
+  .ftueNav .left,
+  .ftueNav .right{
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .ftueBtn{
+    appearance: none;
+    border: 0;
+    border-radius: 14px;
+    padding: 10px 12px;
+    font-weight: 900;
+    font-size: 16px;
+    cursor: pointer;
+    background: rgba(255,255,255,0.95);
+    color: var(--ink);
+    border: 1px solid rgba(0,0,0,0.10);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.08);
+  }
+  .ftueBtn.primary{
+    background: linear-gradient(135deg, var(--pink), var(--purple));
+    color: #fff;
+    border: 0;
+  }
+  .ftueBtn:disabled{
+    opacity: 0.35;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
 
   /* Simple unicorn corner */
   .unicorn {
@@ -524,7 +616,7 @@
               <div class="row" style="gap: 12px;">
                 <input class="input" type="text" id="wordInput" placeholder="Type words here… e.g. cat dog sun unicorn" />
                 <button class="btn" id="startBtn">Load & Start</button>
-                <button class="btn secondary" id="nextWordBtn">Next</button>
+                <button class="btn secondary" id="nextWordBtn">Next Word</button>
                 <button class="btn secondary" id="statsBtn">Stats</button>
                 <button class="btn ghost" id="demoBtn" title="Load a friendly starter list">Get kid words</button>
               </div>
@@ -553,6 +645,7 @@
               <label class="toggle"><input type="checkbox" id="sayLetterToggle" checked /> Say letters</label>
               <label class="toggle"><input type="checkbox" id="soundToggle" checked /> Sounds</label>
               <label class="toggle"><input type="checkbox" id="extKeyboardToggle" checked /> External keyboard</label>
+              <button class="btn ghost" id="howToBtn" type="button" style="padding:10px 12px;font-size:16px;border-radius:14px;">How to...?</button>
             </div>
 
           </div>
@@ -598,6 +691,25 @@ B) CATEGORY PICKER OVERLAY (UI)
   </div>
 </div>
 
+<!-- ---------------------------------
+FTUE OVERLAY (How to)
+--------------------------------- -->
+<div id="ftueOverlay" class="overlay" style="display:none;" role="dialog" aria-modal="true">
+  <div class="overlayCard" id="ftueOverlayCard">
+    <button class="overlayClose" id="ftueCloseBtn" type="button" aria-label="Close">✕</button>
+    <h2 style="margin-top:4px;">How to play</h2>
+    <div class="ftueText" id="ftueText"></div>
+    <div class="ftueNav">
+      <div class="left">
+        <button class="ftueBtn" id="ftuePrevBtn" type="button">◀ Prev</button>
+      </div>
+      <div class="right">
+        <button class="ftueBtn primary" id="ftueNextBtn" type="button">Next ▶</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   // -----------------------------
   // State
@@ -607,6 +719,8 @@ B) CATEGORY PICKER OVERLAY (UI)
   let activeWord = "";
   let lastWord = ""; // prevents immediate repeats
   let currentIndex = 0;
+let wordSpoken = false; // gate: do not pre-speak letters until word cue finishes (if enabled)
+let wordEndFallbackTimer = null; // fallback: if word onend doesn't fire, still enable letter cue
   let startTime = null;
   let timerRaf = null;
 
@@ -624,6 +738,7 @@ B) CATEGORY PICKER OVERLAY (UI)
     nextBtn: document.getElementById('nextWordBtn'),
     statsBtn: document.getElementById('statsBtn'),
     demoBtn: document.getElementById('demoBtn'),
+    howToBtn: document.getElementById('howToBtn'),
 
     sayWordToggle: document.getElementById('sayWordToggle'),
     soundToggle: document.getElementById('soundToggle'),
@@ -636,6 +751,12 @@ B) CATEGORY PICKER OVERLAY (UI)
     statsOverlay: document.getElementById('statsOverlay'),
     statsOverlayCard: document.getElementById('statsOverlayCard'),
     statsCloseBtn: document.getElementById('statsCloseBtn'),
+    ftueOverlay: document.getElementById('ftueOverlay'),
+    ftueOverlayCard: document.getElementById('ftueOverlayCard'),
+    ftueCloseBtn: document.getElementById('ftueCloseBtn'),
+    ftuePrevBtn: document.getElementById('ftuePrevBtn'),
+    ftueNextBtn: document.getElementById('ftueNextBtn'),
+    ftueText: document.getElementById('ftueText'),
 
     stars: document.getElementById('stars'),
     streak: document.getElementById('streak'),
@@ -876,7 +997,9 @@ B) CATEGORY PICKER OVERLAY (UI)
       pitch = 1.12,
       volume = 1.0,
       preferVoice = true,
-      debugTag = 'safeSpeak'
+      debugTag = 'safeSpeak',
+      onstartCb = null,
+      onendCb = null
     } = opts;
 
     const seq = ++speechSeq;
@@ -929,10 +1052,12 @@ B) CATEGORY PICKER OVERLAY (UI)
           started = true;
           clearTimeout(startGuard);
           DBG.push(debugTag + ' onstart');
+          try { if (typeof onstartCb === 'function') onstartCb(); } catch (_) {}
         };
         u.onend = () => {
           clearTimeout(startGuard);
           DBG.push(debugTag + ' onend');
+          try { if (typeof onendCb === 'function') onendCb(); } catch (_) {}
         };
         u.onerror = (e) => {
           clearTimeout(startGuard);
@@ -1014,6 +1139,60 @@ B) CATEGORY PICKER OVERLAY (UI)
     } catch (e) {
       // ignore
     }
+  }
+
+  // Pre-speak tracking: speak the highlighted (next) letter BEFORE the learner presses it
+  let lastSpokenHighlight = { word: '', index: -1 };
+  let highlightSpeakTimer = null;
+
+  function clearHighlightSpeakTimer() {
+    if (highlightSpeakTimer) {
+      clearTimeout(highlightSpeakTimer);
+      highlightSpeakTimer = null;
+    }
+  }
+
+  function clearWordEndFallback() {
+    if (wordEndFallbackTimer) {
+      clearTimeout(wordEndFallbackTimer);
+      wordEndFallbackTimer = null;
+    }
+  }
+
+  function speakHighlightedLetter(reason = '') {
+    // Speaks the CURRENT highlighted (next) letter BEFORE it is pressed.
+    // Gate: if we are configured to say the word, do not speak letters until the word has finished.
+    if (!UI.sayLetterToggle || !UI.sayLetterToggle.checked) return;
+    if (!activeWord) return;
+
+    const waitingForWord = (UI.sayWordToggle && UI.sayWordToggle.checked && ('speechSynthesis' in window));
+    if (waitingForWord && !wordSpoken) return;
+
+    const nextCh = (activeWord.substring(currentIndex, currentIndex + 1) || '').toUpperCase();
+    if (!/^[A-Z]$/.test(nextCh)) return;
+
+    // Prevent repeated speaking for the same highlight state
+    if (lastSpokenHighlight.word === activeWord && lastSpokenHighlight.index === currentIndex) return;
+
+    // Debounce a bit so rapid UI updates do not spam speech.
+    // Important: for the first letter after the word cue, speak immediately.
+    const delay = (reason === 'afterWord' || reason === 'noWordSpeak') ? 0 : 160;
+
+    clearHighlightSpeakTimer();
+    highlightSpeakTimer = setTimeout(() => {
+      if (!activeWord) return;
+
+      const chNow = (activeWord.substring(currentIndex, currentIndex + 1) || '').toUpperCase();
+      if (!/^[A-Z]$/.test(chNow)) return;
+
+      // Re-check the gate at fire time
+      if (waitingForWord && !wordSpoken) return;
+
+      if (lastSpokenHighlight.word === activeWord && lastSpokenHighlight.index === currentIndex) return;
+
+      lastSpokenHighlight = { word: activeWord, index: currentIndex };
+      safeSpeak(chNow.toLowerCase(), { lang: 'en-US', rate: 1.12, pitch: 1.22, debugTag: 'preletter' });
+    }, delay);
   }
 
   // -----------------------------
@@ -1148,9 +1327,11 @@ B) CATEGORY PICKER OVERLAY (UI)
     if (UI.pictureStat) UI.pictureStat.textContent = em;
   }
 
+
   function updateDisplay() {
     if (!activeWord) {
       UI.textBox.innerHTML = '<span class="rest">Press Start</span>';
+      setKeyboardHint('');
       return;
     }
 
@@ -1165,6 +1346,9 @@ B) CATEGORY PICKER OVERLAY (UI)
 
     setKeyboardHint(nextLetter || '');
     updateHUD();
+
+    // Speak highlighted letter ONLY as a pre-typing cue
+    speakHighlightedLetter('updateDisplay');
   }
 
   function startTimer() {
@@ -1228,15 +1412,57 @@ B) CATEGORY PICKER OVERLAY (UI)
     currentIndex = 0;
     startTime = null;
 
+    // Reset pre-letter speaking state for the new round
+    clearHighlightSpeakTimer();
+    lastSpokenHighlight = { word: '', index: -1 };
+    wordSpoken = false;
+
     setHintForWord(activeWord);
-    setBubble('Can you spell it?');
+    setBubble('Can you type it?');
     setCharacter('think');
 
     updateDisplay();
     blurIfNotWordInput();
 
-    // speak the word (child-friendly)
-    speak(activeWord);
+    // Speak the word first. After it finishes, wait a meaningful delay, then cue the FIRST highlighted letter.
+    // The `wordSpoken` gate prevents updateDisplay() from consuming/locking the first-letter cue.
+    clearWordEndFallback();
+
+    if (UI.sayWordToggle && UI.sayWordToggle.checked && ('speechSynthesis' in window)) {
+      // Failsafe: if onend doesn't fire (some engines), enable letters after an estimated duration.
+      const estimatedMs = Math.max(900, activeWord.length * 140);
+      wordEndFallbackTimer = setTimeout(() => {
+        wordSpoken = true;
+        clearHighlightSpeakTimer();
+        lastSpokenHighlight = { word: '', index: -1 };
+        speakHighlightedLetter('afterWord');
+      }, estimatedMs);
+
+      safeSpeak(activeWord, {
+        debugTag: 'word',
+        rate: 0.95,
+        pitch: 1.12,
+        onstartCb: () => {
+          // keep gate closed during the word
+          wordSpoken = false;
+        },
+        onendCb: () => {
+          clearWordEndFallback();
+          // Mark word cue complete, then cue the first highlighted letter after a meaningful delay.
+          wordSpoken = true;
+          clearHighlightSpeakTimer();
+          lastSpokenHighlight = { word: '', index: -1 };
+          setTimeout(() => {
+            speakHighlightedLetter('afterWord');
+          }, 420);
+        }
+      });
+    } else {
+      // If word speaking is off, allow letter cues after a small pause
+      wordSpoken = true;
+      clearWordEndFallback();
+      setTimeout(() => speakHighlightedLetter('noWordSpeak'), 280);
+    }
 
     // attach key listener ONLY when external keyboard is enabled
     document.removeEventListener('keydown', onKeydown);
@@ -1246,6 +1472,15 @@ B) CATEGORY PICKER OVERLAY (UI)
   }
 
   function completeWord() {
+    clearHighlightSpeakTimer();
+    clearWordEndFallback();
+    // Remove highlight from word and keyboard once word is complete
+    setKeyboardHint('');
+
+    // Re-render the whole word as fully typed so the last letter matches the typed color
+    if (UI.textBox) {
+      UI.textBox.innerHTML = '<span class="typed">' + activeWord + '</span>';
+    }
     const endTime = performance.now();
     const timeTaken = startTime ? Number(((endTime - startTime) / 1000).toFixed(1)) : 0;
 
@@ -1337,7 +1572,7 @@ B) CATEGORY PICKER OVERLAY (UI)
 
       currentIndex++;
       playTick();
-      speakLetter(got);
+
 
       if (currentIndex >= activeWord.length) {
         // Give the last letter a moment to be heard before the success phrase.
@@ -1377,17 +1612,24 @@ B) CATEGORY PICKER OVERLAY (UI)
   // -----------------------------
   let statsVisible = false;
   function displayStats(show) {
+    if (!UI.statsOverlay || !UI.statsDisplay) return;
+
     if (!show) {
       UI.statsOverlay.style.display = 'none';
       return;
     }
 
+    // Ensure visible (legacy CSS previously hid it)
+    UI.statsDisplay.style.display = 'block';
+
     const total = stats.length;
     UI.statsDisplay.innerHTML = '<h2 style="margin:6px 0 10px 0;">My Stars</h2>';
     UI.statsDisplay.innerHTML += `<p style="margin:6px 0;"><b>Total words:</b> ${total}</p>`;
 
-    const recent = stats.slice(-10).reverse();
-    if (recent.length) {
+    if (!total) {
+      UI.statsDisplay.innerHTML += '<p style="margin:10px 0 6px 0;"><b>No stats yet.</b> Type a few words, then tap Stats again! 🙂</p>';
+    } else {
+      const recent = stats.slice(-10).reverse();
       UI.statsDisplay.innerHTML += '<p style="margin:10px 0 6px 0;"><b>Recent:</b></p>';
       recent.forEach(s => {
         UI.statsDisplay.innerHTML += `<p style="margin:6px 0;">⭐ ${s.word} - ${s.timeTaken}s</p>`;
@@ -1552,13 +1794,13 @@ B) CATEGORY PICKER OVERLAY (UI)
   const categoryGrid = document.getElementById('categoryGrid');
 
   function openCategoryPicker() {
-    const categoryOverlay = document.getElementById('categoryOverlay');
-    const categoryGrid = document.getElementById('categoryGrid');
-
     if (!categoryOverlay || !categoryGrid) {
       console.error('Category overlay elements not found (categoryOverlay/categoryGrid).');
       return;
     }
+
+    // If FTUE is open, close it so overlays never stack
+    try { closeFtue(); } catch (_) {}
 
     categoryGrid.innerHTML = '';
 
@@ -1583,6 +1825,154 @@ B) CATEGORY PICKER OVERLAY (UI)
     categoryOverlay.onclick = () => (categoryOverlay.style.display = 'none');
     categoryGrid.onclick = (e) => e.stopPropagation();
   }
+  // ---------------------------------
+  // FTUE (First-Time User Experience)
+  // ---------------------------------
+  let ftueStep = 0;
+  let ftueActiveEl = null;
+
+  function clearFtueFocus() {
+    if (ftueActiveEl) {
+      try {
+        ftueActiveEl.classList.remove('ftue-focus', 'ftue-pulse');
+      } catch (_) {}
+      ftueActiveEl = null;
+    }
+  }
+
+  function getExtKeyboardLabelEl() {
+    // Focus should lift the whole toggle pill (label)
+    if (!UI.extKeyboardToggle) return null;
+    return UI.extKeyboardToggle.closest('label') || UI.extKeyboardToggle.parentElement;
+  }
+
+  const FTUE_STEPS = [
+    {
+      text: 'Tap to select a category of words.',
+      getEl: () => UI.demoBtn,
+      hasPrev: false,
+      hasNext: true
+    },
+    {
+      text: "See the words here, or type your own words here separated by a 'space'.",
+      getEl: () => UI.wordInput,
+      hasPrev: true,
+      hasNext: true
+    },
+    {
+      text: 'Tap to run the experience with the selected words.',
+      getEl: () => UI.startBtn,
+      hasPrev: true,
+      hasNext: true
+    },
+    {
+      text: 'If you are using a device that has only an on-screen keyboard (such as a tablet), uncheck this. Laptop keyboards are still considered external here 🙂',
+      getEl: () => getExtKeyboardLabelEl(),
+      hasPrev: true,
+      hasNext: false
+    }
+  ];
+
+  function renderFtueStep(idx) {
+    if (!UI.ftueOverlay || !UI.ftueText || !UI.ftuePrevBtn || !UI.ftueNextBtn) return;
+
+    const step = FTUE_STEPS[idx];
+    if (!step) return;
+
+    // Text
+    UI.ftueText.textContent = step.text;
+
+    // Buttons
+    UI.ftuePrevBtn.disabled = !step.hasPrev;
+    UI.ftueNextBtn.disabled = !step.hasNext;
+
+    // Focus lifting
+    clearFtueFocus();
+    const el = step.getEl ? step.getEl() : null;
+    if (el) {
+      ftueActiveEl = el;
+      try {
+        ftueActiveEl.classList.add('ftue-focus', 'ftue-pulse');
+      } catch (_) {}
+
+      // Ensure visibility on small screens / zoom
+      try {
+        ftueActiveEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+      } catch (_) {}
+    }
+  }
+
+  function openFtue(startIndex = 0) {
+    if (!UI.ftueOverlay) return;
+
+    // Close other overlays if open
+    if (UI.statsOverlay) UI.statsOverlay.style.display = 'none';
+    if (categoryOverlay) categoryOverlay.style.display = 'none';
+
+    ftueStep = Math.max(0, Math.min(FTUE_STEPS.length - 1, startIndex));
+    UI.ftueOverlay.style.display = 'grid';
+
+    // Allow layout + scale to settle before focusing
+    requestAnimationFrame(() => {
+      renderFtueStep(ftueStep);
+
+      // Extra safety: re-apply focus after a tiny delay
+      setTimeout(() => {
+        renderFtueStep(ftueStep);
+      }, 60);
+    });
+  }
+
+  function closeFtue() {
+    if (!UI.ftueOverlay) return;
+    UI.ftueOverlay.style.display = 'none';
+    clearFtueFocus();
+  }
+
+  // Wire FTUE buttons
+  if (UI.howToBtn) {
+    UI.howToBtn.addEventListener('click', () => openFtue(0));
+  }
+
+  if (UI.ftuePrevBtn) {
+    UI.ftuePrevBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (ftueStep <= 0) return;
+      ftueStep -= 1;
+      renderFtueStep(ftueStep);
+    });
+  }
+
+  if (UI.ftueNextBtn) {
+    UI.ftueNextBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (ftueStep >= FTUE_STEPS.length - 1) return;
+      ftueStep += 1;
+      renderFtueStep(ftueStep);
+    });
+  }
+
+  if (UI.ftueCloseBtn) {
+    UI.ftueCloseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeFtue();
+    });
+  }
+
+  // Click outside the FTUE card closes
+  if (UI.ftueOverlay) {
+    UI.ftueOverlay.addEventListener('click', () => closeFtue());
+  }
+  if (UI.ftueOverlayCard) {
+    UI.ftueOverlayCard.addEventListener('click', (e) => e.stopPropagation());
+  }
+
+  // ESC closes FTUE
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && UI.ftueOverlay && UI.ftueOverlay.style.display !== 'none') {
+      closeFtue();
+    }
+  });
 
   categoryOverlay && categoryOverlay.addEventListener('click', () => categoryOverlay.style.display = 'none');
   categoryGrid && categoryGrid.addEventListener('click', e => e.stopPropagation());
@@ -1624,6 +2014,11 @@ B) CATEGORY PICKER OVERLAY (UI)
     updateHUD();
     setHintForWord('');
     refreshSpeechSnapshot('boot');
+
+    // FTUE: auto-run on load
+    setTimeout(() => {
+      try { openFtue(0); } catch (_) {}
+    }, 650);
 
     function computeAppScale(){
     const wrap = document.querySelector('.wrap');
